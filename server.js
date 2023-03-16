@@ -1,8 +1,10 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const cors = require('cors');
 const { Pool } = require('pg')
 const Router = require('express-promise-router')
 const { dbname, dbhost } = require('./config.js');
+const DOMPurify = require('isomorphic-dompurify');
 
 const app = express();
 
@@ -10,6 +12,13 @@ const pool = new Pool({database: dbname, host: dbhost});
 
 const router = new Router()
 
+const clean = DOMPurify.sanitize;
+
+function debuglog(str) {
+  console.log(str);
+}
+
+const s = JSON.stringify;
 
 app.use(cors());
 app.use(express.json());
@@ -58,17 +67,21 @@ async function create_new_session(person_id) {
   }
 }
 
-async function create_new_cookie(session_id) {
+async function get_cookie_hash(person_id) {
   const c = await pool.connect();
   try {
+    const { rows } = await c.query("SELECT encode(cookie_hash, 'base64') FROM cookie WHERE person_id=$1 AND (expiration IS NULL OR expiration > now())", [person_id]);
+    if (rows.length > 0) return rows[0]['cookie_hash'];
+
     await c.query('BEGIN');
 
-    const { rows: [{cookie_hash}] } = await c.query("INSERT INTO cookie (cookie_hash, session_id) VALUES (sha224($1),$2) RETURNING encode(cookie_hash,'base64') AS cookie_hash", [session_id, session_id]);
+    const { rows: [{cookie_hash}] } = await c.query("INSERT INTO cookie (cookie_hash, person_id) VALUES (sha224($1),$2) RETURNING encode(cookie_hash,'base64') AS cookie_hash", [person_id, person_id]);
 
     await c.query('COMMIT');
     return cookie_hash;
   } catch (e) {
     await c.query('ROLLBACK');
+    console.log(e);
     throw e;
   } finally {
     c.release();
@@ -76,19 +89,22 @@ async function create_new_cookie(session_id) {
 }
 
 
-async function get_user_from_session(session_id, cookie_hash=null) {
+async function get_person_from_session(session_id, cookie_hash=null) {
   while(session_id) {
-    const { rows } = await pool.query('SELECT user_id FROM session WHERE session_id=$1',[session_id]);
+    const { rows } = await pool.query('SELECT person_id FROM session WHERE session_id=$1',[session_id]);
     if (rows.length === 0) break;
-    return rows[0];
+    const [ {person_id} ] = rows;
+
+    return person_id;
   }
 
   if(cookie_hash) {
-    const { rows } = await pool.query('SELECT user_id FROM cookie WHERE cookie_hash=$1',[cookie_hash]);
+    const { rows } = await pool.query("SELECT person_id FROM cookie WHERE cookie_hash=decode($1,'base64')",[cookie_hash]);
     if (rows.length === 0) return null;
-    user_id = rows[0];
+    const [ {person_id} ] = rows;
+    console.log('cookie '+cookie_hash + ' person '+person_id)
 
-    return user_id;
+    return person_id;
   }
 
   return null;
@@ -118,30 +134,69 @@ router.get('/fetch', async (req, res) => {
     });
 });
 
-router.get('/getsession', async (req, res) => {
-  const cookie_hash = req.query.cookie_hash;
-  const session_id = req.query.session_id;
-  const user_id = get_user_from_session(session_id, cookie_hash);
-  res.json({
-    cookie_hash: cookie_hash,
-    session_id: session_id, 
-    user_id: user_id
-  });
+router.post(
+  '/newperson',
+  body('age').isNumeric({no_symbols: true}).withMessage('Age must be a number'),
+  body('consent').isBoolean(),
+async (req, res) => {
+  
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
+  const args = {
+    age: req.body.age,
+    monthly_gross_income: clean(req.body.monthly_gross_income || ''),
+    education: clean(req.body.education || ''),
+    gender: clean(req.body.gender || ''),
+    postcode: clean(req.body.postcode || ''),
+    consent: req.body.consent
+  };
+
+  const person_id = await create_new_person(args);
+  const session_id = await create_new_session(person_id);
+  const cookie_hash = await get_cookie_hash(person_id);
+  const ret = {
+    session_id: session_id,
+    cookie_hash: cookie_hash,
+    cookie_hash_urlencoded: encodeURIComponent(cookie_hash)
+  };
+  debuglog(`newperson(${s(args)}) => ${s(ret)} (${s({person_id: person_id})})`);
+  res.json(ret);
+});
+
+router.post('/getsession',
+  body('session_id').optional({ checkFalsy: true }).isNumeric({no_symbols: true}).withMessage('session_id must be a number'),
+async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const cookie_hash = req.body.cookie_hash ? clean(req.body.cookie_hash) : null;
+  let session_id = req.body.session_id;
+  const person_id = await get_person_from_session(session_id, cookie_hash);
+  if (person_id && !session_id) session_id = await create_new_session(person_id);
+  const ret = {
+    cookie_hash: cookie_hash,
+    session_id: session_id
+  };
+  console.log(`getsession(${s({session_id: session_id, cookie_hash: cookie_hash})}) => ${s(ret)}`);
+  res.json(ret);
 });
 
 router.get('/test', async (req, res) => {
   console.log('test');
-  const person_id = await create_new_person({age: 41, monthly_gross_income: '3000-4500', education: 'Postdoctoral', gender: 'Man', postcode: '3582', consent: 'yes'});
+  //const person_id = await create_new_person({age: 41, monthly_gross_income: '3000-4500', education: 'Postdoctoral', gender: 'Man', postcode: '3582', consent: 'yes'});
+  const person_id = 6;
   const session_id = await create_new_session(person_id);
-  const cookie_hash = await create_new_cookie(session_id);
+  const cookie_hash = await get_cookie_hash(person_id);
   res.json({
     person_id: person_id,
     session_id: session_id,
-    cookie_hash: cookie_hash
+    cookie_hash: cookie_hash,
+    cookie_hash_urlencoded: encodeURIComponent(cookie_hash)
   });
 });
 
+//app.use(express.json());
 app.use('/rate',router);
 
 const port = 8000;
