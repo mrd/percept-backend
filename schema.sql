@@ -17,12 +17,15 @@ CREATE TABLE person (
 
 CREATE TABLE session (
     session_id SERIAL PRIMARY KEY,
-    person_id INTEGER REFERENCES person
+    person_id INTEGER REFERENCES person,
+    session_start TIMESTAMPTZ DEFAULT now(),
+    session_active TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE cookie (
     cookie_hash BYTEA,
-    session_id INTEGER REFERENCES session,
+    person_id INTEGER REFERENCES person,
+    cookie_creation TIMESTAMPTZ DEFAULT now(),
     expiration TIMESTAMPTZ
 );
 
