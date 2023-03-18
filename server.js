@@ -49,6 +49,7 @@ async function create_new_person({age, monthly_gross_income, education, gender, 
     return person_id;
   } catch (e) {
     await c.query('ROLLBACK');
+    debuglog(`ERROR ${e}`);
     throw e;
   } finally {
     c.release();
