@@ -3,12 +3,17 @@ const { body, validationResult } = require('express-validator');
 const cors = require('cors');
 const { Pool } = require('pg')
 const Router = require('express-promise-router')
-const { dbname, dbhost } = require('./config.js');
+const { dbname, dbhost, testdbname, testdbhost } = require('./config.js');
 const DOMPurify = require('isomorphic-dompurify');
 
 const app = express();
 
-const pool = new Pool({database: dbname, host: dbhost});
+let pool;
+if (process.env.NODE_ENV === 'test') {
+  pool = new Pool({database: testdbname, host: testdbhost});
+} else {
+  pool = new Pool({database: dbname, host: dbhost});
+}
 
 const router = new Router()
 
@@ -201,9 +206,10 @@ app.use('/rate',router);
 
 const port = 8000;
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}.`);
-});
-
-
-
+if (process.env.NODE_ENV !== 'test') {
+  module.exports = app.listen(port, () => {
+    console.log(`Server is running on port ${port}.`);
+  });
+} else {
+  module.exports = { app, pool };
+}
