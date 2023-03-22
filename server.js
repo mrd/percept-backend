@@ -122,21 +122,46 @@ async function get_person_from_session(session_id, cookie_hash=null) {
   return null;
 }
 
-// sample url
-// /rate/new?category_id=1&image_id=2&rating=3&session_id=4&age=5&mgi=0-1500&education=Postgraduate&gender=Nonbinary&postalcode=3333EE&consent=yes
-// returns:
-//   { session_id: int, error: boolean, errordesc: string }
-router.all('/new', async (req, res) => {
-    const qparams = JSON.stringify(req.query);
-    const pparams = JSON.stringify(req.body);
-    res.json({
-      qparams: qparams,
-      pparams: pparams
-    });
+async function create_new_rating({session_id, image_id, category_id, rating}) {
+  const c = await pool.connect();
+  try {
+    await c.query('BEGIN');
+    const qtxt = 'INSERT into rating (session_id, image_id, category_id, rating) VALUES ($1, $2, $3, $4)';
+    await c.query(qtxt, [session_id, image_id, category_id, rating]);
+    await c.query('COMMIT');
+    debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating})`);
+  } catch (e) {
+    await c.query('ROLLBACK');
+    debuglog(`ERROR ${e}`);
+    throw e;
+  } finally {
+    c.release();
+  }
+}
+
+router.post('/new',
+  body('session_id').isNumeric({no_symbols: true}).withMessage('Session ID must be a number'),
+  body('image_id').isNumeric({no_symbols: true}).withMessage('Image ID must be a number'),
+  body('category_id').isNumeric({no_symbols: true}).withMessage('Category ID must be a number'),
+  body('rating').isInt({min: 1, max: 5}).withMessage('Rating must be a number from 1 to 5'),
+async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    debuglog(`new(${s(req.body)}) => { errors: ${s(errors.array())} }`);
+    return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
+  }
+
+  try {
+    await create_new_rating(req.body);
+  } catch(e) {
+    debuglog(`new(${s(req.body)}) => { errors: [${s(e)}] }`);
+    return res.status(400).json({ errors: [e.detail] });
+  }
+  res.json({status: 'ok'});
 });
 
-router.get('/fetch', async (req, res) => {
-    const { rows } = await pool.query('SELECT cityname,url FROM image ORDER BY random() LIMIT 4');
+router.all('/fetch', async (req, res) => {
+    const { rows } = await pool.query('SELECT cityname,url,image_id FROM image ORDER BY random() LIMIT 4');
     res.json({
       main_image: rows[0],
       category: {
@@ -144,6 +169,11 @@ router.get('/fetch', async (req, res) => {
       },
       impressions: rows.slice(1)
     });
+});
+
+router.all('/getcategories', async (req, res) => {
+  const { rows } = await pool.query('SELECT shortname, category_id FROM category ORDER BY category_id');
+  res.json({ categories: rows });
 });
 
 router.post(

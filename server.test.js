@@ -77,3 +77,122 @@ describe('New person', () => {
   });
 });
 
+describe('Rating', () => {
+  const person1_survey = {
+    age: '19',
+    monthly_gross_income: '1500-3000',
+    education: 'In University',
+    gender: 'Non-binary',
+    postcode: '3584 CS',
+    consent: true
+  };
+  it('POST /rate/new', async () => {
+    const res1 = await request.post('/rate/newperson').send(person1_survey);
+    expect(res1.status).toEqual(200);
+    expect(res1.body.session_id).toEqual(1);
+    expect(res1.body.cookie_hash).toHaveLength(40);
+
+    const res2 = await request.post('/rate/getcategories').send();
+    expect(res2.status).toEqual(200);
+    expect(res2.body.categories.length).toBeGreaterThan(1);
+
+    const res3 = await request.post('/rate/fetch').send();
+    expect(res3.status).toEqual(200);
+    expect(res3.body.main_image).toBeDefined();
+    expect(res3.body.main_image.image_id).toBeDefined();
+
+    const input = {
+      category_id: res2.body.categories[0].category_id,
+      image_id: res3.body.main_image.image_id,
+      rating: 3,
+      session_id: res1.body.session_id
+    };
+    const res4 = await request.post('/rate/new').send(input);
+    expect(res4.status).toEqual(200);
+  });
+  it('POST /rate/new - malformed session', async () => {
+    const input = {
+      category_id: 1,
+      image_id: 1,
+      rating: 3,
+      session_id: 'a'
+    };
+    const res = await request.post('/rate/new').send(input);
+    expect(res.status).toEqual(400);
+    expect(res.body.errors).toHaveLength(1);
+    expect(res.body.errors[0]).toMatch(/Session ID must be a number/);
+  });
+  it('POST /rate/new - invalid session', async () => {
+    const input = {
+      category_id: 1,
+      image_id: 1,
+      rating: 3,
+      session_id: 2
+    };
+    const res = await request.post('/rate/new').send(input);
+    expect(res.status).toEqual(400);
+    expect(res.body.errors).toHaveLength(1);
+    expect(res.body.errors[0]).toMatch(/session_id.*not present/);
+  });
+  it('POST /rate/new - invalid category', async () => {
+    const res1 = await request.post('/rate/newperson').send(person1_survey);
+    expect(res1.status).toEqual(200);
+    expect(res1.body.session_id).toEqual(1);
+    expect(res1.body.cookie_hash).toHaveLength(40);
+    const input = {
+      category_id: 1111,
+      image_id: 1,
+      rating: 3,
+      session_id: 1
+    };
+    const res = await request.post('/rate/new').send(input);
+    expect(res.status).toEqual(400);
+    expect(res.body.errors).toHaveLength(1);
+    expect(res.body.errors[0]).toMatch(/category_id.*not present/);
+  });
+  it('POST /rate/new - invalid image', async () => {
+    const res1 = await request.post('/rate/newperson').send(person1_survey);
+    expect(res1.status).toEqual(200);
+    expect(res1.body.session_id).toEqual(1);
+    expect(res1.body.cookie_hash).toHaveLength(40);
+    const res2 = await request.post('/rate/getcategories').send();
+    expect(res2.status).toEqual(200);
+    expect(res2.body.categories.length).toBeGreaterThan(1);
+    const input = {
+      category_id: res2.body.categories[0].category_id,
+      image_id: 111111111,
+      rating: 3,
+      session_id: 1
+    };
+    const res = await request.post('/rate/new').send(input);
+    expect(res.status).toEqual(400);
+    expect(res.body.errors).toHaveLength(1);
+    expect(res.body.errors[0]).toMatch(/image_id.*not present/);
+  });
+  it('POST /rate/new - invalid rating', async () => {
+    const res1 = await request.post('/rate/newperson').send(person1_survey);
+    expect(res1.status).toEqual(200);
+    expect(res1.body.session_id).toEqual(1);
+    expect(res1.body.cookie_hash).toHaveLength(40);
+
+    const res2 = await request.post('/rate/getcategories').send();
+    expect(res2.status).toEqual(200);
+    expect(res2.body.categories.length).toBeGreaterThan(1);
+
+    const res3 = await request.post('/rate/fetch').send();
+    expect(res3.status).toEqual(200);
+    expect(res3.body.main_image).toBeDefined();
+    expect(res3.body.main_image.image_id).toBeDefined();
+
+    const input = {
+      category_id: res2.body.categories[0].category_id,
+      image_id: res3.body.main_image.image_id,
+      rating: 6,
+      session_id: res1.body.session_id
+    };
+    const res4 = await request.post('/rate/new').send(input);
+    expect(res4.status).toEqual(400);
+    expect(res4.body.errors).toHaveLength(1);
+    expect(res4.body.errors[0]).toMatch(/Rating must be a number/);
+  });
+});
