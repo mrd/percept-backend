@@ -239,7 +239,7 @@ router.get('/test', async (req, res) => {
 });
 
 //app.use(express.json());
-app.use('/rate',router);
+app.use('/api/v1',router);
 
 const port = 8000;
 

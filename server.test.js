@@ -37,8 +37,8 @@ afterEach(
 );
 
 describe('Fetch images', () => {
-   it('GET /rate/fetch', async () => {
-      const res = await request.get('/rate/fetch');
+   it('GET /api/v1/fetch', async () => {
+      const res = await request.get('/api/v1/fetch');
       expect(res.status).toEqual(200);
       expect(res.body.impressions).toHaveLength(3);
       expect(res.body.impressions[0].url).toMatch(/jpg/);
@@ -55,21 +55,21 @@ describe('New person', () => {
          postcode: '3000',
          consent: true
       };
-  it('POST /rate/newperson - invalid age', async () => {
-    const res = await request.post('/rate/newperson').send({...person1_survey, age: '25a' });
+  it('POST /api/v1/newperson - invalid age', async () => {
+    const res = await request.post('/api/v1/newperson').send({...person1_survey, age: '25a' });
     expect(res.status).toEqual(400);
   });
-  it('POST /rate/newperson - invalid consent', async () => {
-    const res = await request.post('/rate/newperson').send({...person1_survey, consent: '' });
+  it('POST /api/v1/newperson - invalid consent', async () => {
+    const res = await request.post('/api/v1/newperson').send({...person1_survey, consent: '' });
     expect(res.status).toEqual(400);
   });
 
-  it('POST /rate/newperson', async () => {
-    const res = await request.post('/rate/newperson').send(person1_survey);
+  it('POST /api/v1/newperson', async () => {
+    const res = await request.post('/api/v1/newperson').send(person1_survey);
     expect(res.status).toEqual(200);
     expect(res.body.session_id).toEqual(1);
     expect(res.body.cookie_hash).toHaveLength(40);
-    const res2 = await request.post('/rate/getsession').send({
+    const res2 = await request.post('/api/v1/getsession').send({
       cookie_hash: res.body.cookie_hash
     });
     expect(res2.status).toEqual(200);
@@ -86,17 +86,17 @@ describe('Rating', () => {
     postcode: '3584 CS',
     consent: true
   };
-  it('POST /rate/new', async () => {
-    const res1 = await request.post('/rate/newperson').send(person1_survey);
+  it('POST /api/v1/new', async () => {
+    const res1 = await request.post('/api/v1/newperson').send(person1_survey);
     expect(res1.status).toEqual(200);
     expect(res1.body.session_id).toEqual(1);
     expect(res1.body.cookie_hash).toHaveLength(40);
 
-    const res2 = await request.post('/rate/getcategories').send();
+    const res2 = await request.post('/api/v1/getcategories').send();
     expect(res2.status).toEqual(200);
     expect(res2.body.categories.length).toBeGreaterThan(1);
 
-    const res3 = await request.post('/rate/fetch').send();
+    const res3 = await request.post('/api/v1/fetch').send();
     expect(res3.status).toEqual(200);
     expect(res3.body.main_image).toBeDefined();
     expect(res3.body.main_image.image_id).toBeDefined();
@@ -107,35 +107,35 @@ describe('Rating', () => {
       rating: 3,
       session_id: res1.body.session_id
     };
-    const res4 = await request.post('/rate/new').send(input);
+    const res4 = await request.post('/api/v1/new').send(input);
     expect(res4.status).toEqual(200);
   });
-  it('POST /rate/new - malformed session', async () => {
+  it('POST /api/v1/new - malformed session', async () => {
     const input = {
       category_id: 1,
       image_id: 1,
       rating: 3,
       session_id: 'a'
     };
-    const res = await request.post('/rate/new').send(input);
+    const res = await request.post('/api/v1/new').send(input);
     expect(res.status).toEqual(400);
     expect(res.body.errors).toHaveLength(1);
     expect(res.body.errors[0]).toMatch(/Session ID must be a number/);
   });
-  it('POST /rate/new - invalid session', async () => {
+  it('POST /api/v1/new - invalid session', async () => {
     const input = {
       category_id: 1,
       image_id: 1,
       rating: 3,
       session_id: 2
     };
-    const res = await request.post('/rate/new').send(input);
+    const res = await request.post('/api/v1/new').send(input);
     expect(res.status).toEqual(400);
     expect(res.body.errors).toHaveLength(1);
     expect(res.body.errors[0]).toMatch(/session_id.*not present/);
   });
-  it('POST /rate/new - invalid category', async () => {
-    const res1 = await request.post('/rate/newperson').send(person1_survey);
+  it('POST /api/v1/new - invalid category', async () => {
+    const res1 = await request.post('/api/v1/newperson').send(person1_survey);
     expect(res1.status).toEqual(200);
     expect(res1.body.session_id).toEqual(1);
     expect(res1.body.cookie_hash).toHaveLength(40);
@@ -145,17 +145,17 @@ describe('Rating', () => {
       rating: 3,
       session_id: 1
     };
-    const res = await request.post('/rate/new').send(input);
+    const res = await request.post('/api/v1/new').send(input);
     expect(res.status).toEqual(400);
     expect(res.body.errors).toHaveLength(1);
     expect(res.body.errors[0]).toMatch(/category_id.*not present/);
   });
-  it('POST /rate/new - invalid image', async () => {
-    const res1 = await request.post('/rate/newperson').send(person1_survey);
+  it('POST /api/v1/new - invalid image', async () => {
+    const res1 = await request.post('/api/v1/newperson').send(person1_survey);
     expect(res1.status).toEqual(200);
     expect(res1.body.session_id).toEqual(1);
     expect(res1.body.cookie_hash).toHaveLength(40);
-    const res2 = await request.post('/rate/getcategories').send();
+    const res2 = await request.post('/api/v1/getcategories').send();
     expect(res2.status).toEqual(200);
     expect(res2.body.categories.length).toBeGreaterThan(1);
     const input = {
@@ -164,22 +164,22 @@ describe('Rating', () => {
       rating: 3,
       session_id: 1
     };
-    const res = await request.post('/rate/new').send(input);
+    const res = await request.post('/api/v1/new').send(input);
     expect(res.status).toEqual(400);
     expect(res.body.errors).toHaveLength(1);
     expect(res.body.errors[0]).toMatch(/image_id.*not present/);
   });
-  it('POST /rate/new - invalid rating', async () => {
-    const res1 = await request.post('/rate/newperson').send(person1_survey);
+  it('POST /api/v1/new - invalid rating', async () => {
+    const res1 = await request.post('/api/v1/newperson').send(person1_survey);
     expect(res1.status).toEqual(200);
     expect(res1.body.session_id).toEqual(1);
     expect(res1.body.cookie_hash).toHaveLength(40);
 
-    const res2 = await request.post('/rate/getcategories').send();
+    const res2 = await request.post('/api/v1/getcategories').send();
     expect(res2.status).toEqual(200);
     expect(res2.body.categories.length).toBeGreaterThan(1);
 
-    const res3 = await request.post('/rate/fetch').send();
+    const res3 = await request.post('/api/v1/fetch').send();
     expect(res3.status).toEqual(200);
     expect(res3.body.main_image).toBeDefined();
     expect(res3.body.main_image.image_id).toBeDefined();
@@ -190,7 +190,7 @@ describe('Rating', () => {
       rating: 6,
       session_id: res1.body.session_id
     };
-    const res4 = await request.post('/rate/new').send(input);
+    const res4 = await request.post('/api/v1/new').send(input);
     expect(res4.status).toEqual(400);
     expect(res4.body.errors).toHaveLength(1);
     expect(res4.body.errors[0]).toMatch(/Rating must be a number/);
