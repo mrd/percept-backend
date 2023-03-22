@@ -56,10 +56,17 @@ async function create_new_person({age, monthly_gross_income, education, gender, 
   }
 }
 
-async function create_new_session(person_id) {
+async function create_or_retrieve_session(person_id) {
   const c = await pool.connect();
   try {
     await c.query('BEGIN');
+
+    const { rows } = await c.query('SELECT session_id FROM session WHERE person_id = $1 ORDER BY session_active DESC LIMIT 1', [person_id]);
+    if (rows.length === 1) {
+      const [ {session_id} ] = rows;
+      await c.query('COMMIT');
+      return session_id;
+    }
 
     const { rows: [{session_id}] } = await c.query('INSERT INTO session (person_id) VALUES ($1) RETURNING session_id', [person_id]);
 
@@ -94,13 +101,12 @@ async function get_cookie_hash(person_id) {
   }
 }
 
-
 async function get_person_from_session(session_id, cookie_hash=null) {
   while(session_id) {
     const { rows } = await pool.query('SELECT person_id FROM session WHERE session_id=$1',[session_id]);
     if (rows.length === 0) break;
     const [ {person_id} ] = rows;
-
+    debuglog(`get_person_from_session(${session_id},${cookie_hash}) => ${person_id}`);
     return person_id;
   }
 
@@ -108,11 +114,11 @@ async function get_person_from_session(session_id, cookie_hash=null) {
     const { rows } = await pool.query("SELECT person_id FROM cookie WHERE cookie_hash=decode($1,'base64')",[cookie_hash]);
     if (rows.length === 0) return null;
     const [ {person_id} ] = rows;
-    console.log('cookie '+cookie_hash + ' person '+person_id)
-
+    debuglog(`get_person_from_session(${session_id},${cookie_hash}) => ${person_id}`);
     return person_id;
   }
 
+  debuglog(`get_person_from_session(${session_id},${cookie_hash}) => null`);
   return null;
 }
 
@@ -159,7 +165,7 @@ async (req, res) => {
   };
 
   const person_id = await create_new_person(args);
-  const session_id = await create_new_session(person_id);
+  const session_id = await create_or_retrieve_session(person_id);
   const cookie_hash = await get_cookie_hash(person_id);
   const ret = {
     session_id: session_id,
@@ -179,12 +185,12 @@ async (req, res) => {
   const cookie_hash = req.body.cookie_hash ? clean(req.body.cookie_hash) : null;
   let session_id = req.body.session_id;
   const person_id = await get_person_from_session(session_id, cookie_hash);
-  if (person_id && !session_id) session_id = await create_new_session(person_id);
+  if (person_id && !session_id) session_id = await create_or_retrieve_session(person_id);
   const ret = {
     cookie_hash: cookie_hash,
     session_id: session_id
   };
-  console.log(`getsession(${s({session_id: session_id, cookie_hash: cookie_hash})}) => ${s(ret)}`);
+  debuglog(`getsession(${s({session_id: session_id, cookie_hash: cookie_hash})}) => ${s(ret)}`);
   res.json(ret);
 });
 
@@ -192,7 +198,7 @@ router.get('/test', async (req, res) => {
   console.log('test');
   //const person_id = await create_new_person({age: 41, monthly_gross_income: '3000-4500', education: 'Postdoctoral', gender: 'Man', postcode: '3582', consent: 'yes'});
   const person_id = 6;
-  const session_id = await create_new_session(person_id);
+  const session_id = await create_or_retrieve_session(person_id);
   const cookie_hash = await get_cookie_hash(person_id);
   res.json({
     person_id: person_id,

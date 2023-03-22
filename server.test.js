@@ -40,33 +40,40 @@ describe('Fetch images', () => {
    it('GET /rate/fetch', async () => {
       const res = await request.get('/rate/fetch');
       expect(res.status).toEqual(200);
-      expect(res.body.impressions.length).toEqual(3);
+      expect(res.body.impressions).toHaveLength(3);
+      expect(res.body.impressions[0].url).toMatch(/jpg/);
+      expect(res.body.main_image.url).toMatch(/jpg/);
    });
 });
 
 describe('New person', () => {
-   it('POST /newperson - invalid age', async () => {
-      const res = await request.post('/rate/newperson').send({
-         age: '25a',
-         monthly_gross_income: '0-1500',
-         education: 'Bachelors',
-         gender: 'Woman',
-         postcode: '3000',
-         consent: true
-      });
-      expect(res.status).toEqual(400);
-   });
-
-   it('POST /newperson', async () => {
-      const res = await request.post('/rate/newperson').send({
+  const person1_survey = {
          age: '25',
          monthly_gross_income: '0-1500',
          education: 'Bachelors',
          gender: 'Woman',
          postcode: '3000',
          consent: true
-      });
-      expect(res.status).toEqual(200);
-      //expect(res.body.session_id).toBeInstanceOf(Number);
-   });
+      };
+  it('POST /rate/newperson - invalid age', async () => {
+    const res = await request.post('/rate/newperson').send({...person1_survey, age: '25a' });
+    expect(res.status).toEqual(400);
+  });
+  it('POST /rate/newperson - invalid consent', async () => {
+    const res = await request.post('/rate/newperson').send({...person1_survey, consent: '' });
+    expect(res.status).toEqual(400);
+  });
+
+  it('POST /rate/newperson', async () => {
+    const res = await request.post('/rate/newperson').send(person1_survey);
+    expect(res.status).toEqual(200);
+    expect(res.body.session_id).toEqual(1);
+    expect(res.body.cookie_hash).toHaveLength(40);
+    const res2 = await request.post('/rate/getsession').send({
+      cookie_hash: res.body.cookie_hash
+    });
+    expect(res2.status).toEqual(200);
+    expect(res2.body.session_id).toEqual(1);
+  });
 });
+
