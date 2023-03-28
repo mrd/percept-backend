@@ -12,12 +12,13 @@ const { globSync, Glob } = require('glob');
 beforeEach(
    async() => {
       //app.pool = new Pool({database: testdbname, host: testdbhost});
-      const upfiles = new globSync('migrations/**/up.sql');
+      const upfiles = new globSync('migrations/**/up.sql').sort();
       for (const file of upfiles) {
+        //console.log(`loading ${file} from ${upfiles}`);
         const sql = fs.readFileSync(file).toString();
         await app.pool.query(sql);
       }
-      const seedfiles = new globSync('seeds/tests/*.sql');
+      const seedfiles = new globSync('seeds/{test,all}/*.sql').sort();
       for (const file of seedfiles) {
         const sql = fs.readFileSync(file).toString();
         await app.pool.query(sql);
@@ -28,8 +29,9 @@ beforeEach(
 afterEach(
    async() => {
       //await app.pool.end();
-      const downfiles = new globSync('migrations/**/down.sql');
+      const downfiles = new globSync('migrations/**/down.sql').sort().reverse();
       for (const file of downfiles) {
+        //console.log(`loading ${file}`);
         const sql = fs.readFileSync(file).toString();
         await app.pool.query(sql);
       }
