@@ -171,8 +171,13 @@ router.all('/fetch', async (req, res) => {
     });
 });
 
-router.all('/getcategories', async (req, res) => {
-  const { rows } = await pool.query('SELECT shortname, category_id FROM category ORDER BY category_id');
+router.all('/getcategories',
+  body('langabbr').optional({ checkFalsy: true }).isNumeric({no_symbols: true}).withMessage('langabbr must be a 2-letter language abbreviation'),
+async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  const langabbr = req.body.langabbr ?? 'en';
+  const { rows } = await pool.query('SELECT shortname, category_id, description FROM category JOIN category_description USING (category_id) WHERE langabbr = $1 ORDER BY category_id', [langabbr]);
   res.json({ categories: rows });
 });
 

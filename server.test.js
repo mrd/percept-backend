@@ -38,13 +38,21 @@ afterEach(
    }
 );
 
-describe('Fetch images', () => {
+describe('Fetch data', () => {
    it('GET /api/v1/fetch', async () => {
       const res = await request.get('/api/v1/fetch');
       expect(res.status).toEqual(200);
       expect(res.body.impressions).toHaveLength(3);
       expect(res.body.impressions[0].url).toMatch(/jpg/);
       expect(res.body.main_image.url).toMatch(/jpg/);
+   });
+
+   it('GET /api/v1/getcategories', async () => {
+      const res = await request.get('/api/v1/getcategories');
+      expect(res.status).toEqual(200);
+      expect(res.body.categories.length).toBeGreaterThan(1);
+      expect(res.body.categories[0].shortname.length).toBeGreaterThan(1);
+      expect(res.body.categories[0].description.length).toBeGreaterThan(1);
    });
 });
 
