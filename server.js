@@ -126,10 +126,26 @@ async function create_new_rating({session_id, image_id, category_id, rating}) {
   const c = await pool.connect();
   try {
     await c.query('BEGIN');
-    const qtxt = 'INSERT into rating (session_id, image_id, category_id, rating) VALUES ($1, $2, $3, $4)';
-    await c.query(qtxt, [session_id, image_id, category_id, rating]);
+    const qtxt = 'INSERT into rating (session_id, image_id, category_id, rating) VALUES ($1, $2, $3, $4) RETURNING ts';
+    const { rows: [{ ts }] } = await c.query(qtxt, [session_id, image_id, category_id, rating]);
+    await c.query('INSERT into undoable (session_id, ts) VALUES ($1, $2) ON CONFLICT (session_id) DO UPDATE SET ts=$3 WHERE undoable.session_id=$4', [session_id, ts, ts, session_id]);
     await c.query('COMMIT');
-    debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating})`);
+    debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating}) => {ts: ${ts}}`);
+  } catch (e) {
+    await c.query('ROLLBACK');
+    debuglog(`ERROR ${e}`);
+    throw e;
+  } finally {
+    c.release();
+  }
+}
+
+async function undo_last_rating({session_id}) {
+  const c = await pool.connect();
+  try {
+    await c.query('BEGIN');
+    await c.query('COMMIT');
+    debuglog(`undo_last_rating(${session_id})`);
   } catch (e) {
     await c.query('ROLLBACK');
     debuglog(`ERROR ${e}`);
@@ -157,6 +173,25 @@ async (req, res) => {
     debuglog(`new(${s(req.body)}) => { errors: [${s(e)}] }`);
     return res.status(400).json({ errors: [e.detail] });
   }
+  res.json({status: 'ok'});
+});
+
+router.post('/undo',
+  body('session_id').isNumeric({no_symbols: true}).withMessage('Session ID must be a number'),
+async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    debuglog(`new(${s(req.body)}) => { errors: ${s(errors.array())} }`);
+    return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
+  }
+
+  try {
+    await undo_last_rating(req.body);
+  } catch(e) {
+    debuglog(`undo(${s(req.body)}) => { errors: [${s(e)}] }`);
+    return res.status(400).json({ errors: [e.detail] });
+  }
+
   res.json({status: 'ok'});
 });
 
