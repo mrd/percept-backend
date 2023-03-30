@@ -238,7 +238,7 @@ describe('Rating', () => {
     expect(res4.status).toEqual(200);
     const ts = res4.body.timestamp;
 
-    const res5 = await request.post('/api/v1/undo').send({session_id: res1.body.session_id});
+    const res5 = await request.post('/api/v1/undo').send(res1.body);
     expect(res5.status).toEqual(200);
     expect(res5.body.timestamp).toEqual(res4.body.timestamp);
   });
@@ -269,12 +269,13 @@ describe('Rating', () => {
     expect(res4.status).toEqual(200);
     const ts = res4.body.timestamp;
 
-    const res5 = await request.post('/api/v1/undo').send({session_id: res1.body.session_id});
+    const res5 = await request.post('/api/v1/undo').send(res1.body);
     expect(res5.status).toEqual(200);
     expect(res5.body.timestamp).toEqual(res4.body.timestamp);
 
-    const res6 = await request.post('/api/v1/undo').send({session_id: res1.body.session_id});
+    const res6 = await request.post('/api/v1/undo').send(res1.body);
     expect(res6.status).toEqual(400);
+    expect(res6.body.errors[0]).toMatch(/undo failed/);
   });
 
   it('POST /api/v1/undo - undo before any rating', async () => {
@@ -292,12 +293,14 @@ describe('Rating', () => {
     expect(res3.body.main_image).toBeDefined();
     expect(res3.body.main_image.image_id).toBeDefined();
 
-    const res5 = await request.post('/api/v1/undo').send({session_id: res1.body.session_id});
+    const res5 = await request.post('/api/v1/undo').send(res1.body);
     expect(res5.status).toEqual(400);
+    expect(res5.body.errors[0]).toMatch(/undo failed/);
   });
 
   it('POST /api/v1/undo - invalid session_id', async () => {
-    const res = await request.post('/api/v1/undo').send({session_id: 1});
+    const res = await request.post('/api/v1/undo').send({session_id: 1, cookie_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'});
     expect(res.status).toEqual(400);
+    expect(res.body.errors[0]).toMatch(/session_id.*not present/);
   });
 });

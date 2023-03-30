@@ -122,6 +122,12 @@ async function get_person_from_session(session_id, cookie_hash=null) {
   return null;
 }
 
+async function check_cookie_hash({session_id, cookie_hash}) {
+  //debuglog(`check_cookie_hash(${session_id},${cookie_hash})`);
+  const { rows } = await pool.query("SELECT person_id FROM session JOIN cookie USING (person_id) WHERE session_id = $1 AND cookie_hash = decode($2,'base64')", [session_id, cookie_hash]);
+  return (rows.length !== 0);
+}
+
 async function create_new_rating({session_id, image_id, category_id, rating}) {
   const c = await pool.connect();
   try {
@@ -182,6 +188,9 @@ async (req, res) => {
     debuglog(`new(${s(req.body)}) => { errors: ${s(errors.array())} }`);
     return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
   }
+  req.body.cookie_hash = req.body.cookie_hash ? clean(req.body.cookie_hash) : null;
+  if (!await check_cookie_hash(req.body))
+    return res.status(400).json({ errors: ['invalid authentication or session_id not present'] });
 
   try {
     ts = await create_new_rating(req.body);
@@ -198,6 +207,7 @@ async (req, res) => {
 
 router.post('/undo',
   body('session_id').isNumeric({no_symbols: true}).withMessage('Session ID must be a number'),
+  body('cookie_hash').isLength(40).withMessage('invalid length for cookie_hash'),
 async (req, res) => {
   const errors = validationResult(req);
   let ts;
@@ -205,6 +215,9 @@ async (req, res) => {
     debuglog(`undo(${s(req.body)}) => { errors: ${s(errors.array())} }`);
     return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
   }
+  req.body.cookie_hash = req.body.cookie_hash ? clean(req.body.cookie_hash) : null;
+  if (!await check_cookie_hash(req.body))
+    return res.status(400).json({ errors: ['invalid authentication or session_id not present'] });
 
   try {
     ts = await undo_last_rating(req.body);
