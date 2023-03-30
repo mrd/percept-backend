@@ -205,4 +205,91 @@ describe('Rating', () => {
     expect(res4.body.errors).toHaveLength(1);
     expect(res4.body.errors[0]).toMatch(/Rating must be a number/);
   });
+
+  it('POST /api/v1/undo', async () => {
+    const res1 = await request.post('/api/v1/newperson').send(person1_survey);
+    expect(res1.status).toEqual(200);
+    expect(res1.body.session_id).toEqual(1);
+    expect(res1.body.cookie_hash).toHaveLength(40);
+
+    const res2 = await request.post('/api/v1/getcategories').send();
+    expect(res2.status).toEqual(200);
+    expect(res2.body.categories.length).toBeGreaterThan(1);
+
+    const res3 = await request.post('/api/v1/fetch').send();
+    expect(res3.status).toEqual(200);
+    expect(res3.body.main_image).toBeDefined();
+    expect(res3.body.main_image.image_id).toBeDefined();
+
+    const input = {
+      category_id: res2.body.categories[0].category_id,
+      image_id: res3.body.main_image.image_id,
+      rating: 3,
+      session_id: res1.body.session_id
+    };
+    const res4 = await request.post('/api/v1/new').send(input);
+    expect(res4.status).toEqual(200);
+    const ts = res4.body.timestamp;
+
+    const res5 = await request.post('/api/v1/undo').send({session_id: res1.body.session_id});
+    expect(res5.status).toEqual(200);
+    expect(res5.body.timestamp).toEqual(res4.body.timestamp);
+  });
+
+  it('POST /api/v1/undo - double undo', async () => {
+    const res1 = await request.post('/api/v1/newperson').send(person1_survey);
+    expect(res1.status).toEqual(200);
+    expect(res1.body.session_id).toEqual(1);
+    expect(res1.body.cookie_hash).toHaveLength(40);
+
+    const res2 = await request.post('/api/v1/getcategories').send();
+    expect(res2.status).toEqual(200);
+    expect(res2.body.categories.length).toBeGreaterThan(1);
+
+    const res3 = await request.post('/api/v1/fetch').send();
+    expect(res3.status).toEqual(200);
+    expect(res3.body.main_image).toBeDefined();
+    expect(res3.body.main_image.image_id).toBeDefined();
+
+    const input = {
+      category_id: res2.body.categories[0].category_id,
+      image_id: res3.body.main_image.image_id,
+      rating: 3,
+      session_id: res1.body.session_id
+    };
+    const res4 = await request.post('/api/v1/new').send(input);
+    expect(res4.status).toEqual(200);
+    const ts = res4.body.timestamp;
+
+    const res5 = await request.post('/api/v1/undo').send({session_id: res1.body.session_id});
+    expect(res5.status).toEqual(200);
+    expect(res5.body.timestamp).toEqual(res4.body.timestamp);
+
+    const res6 = await request.post('/api/v1/undo').send({session_id: res1.body.session_id});
+    expect(res6.status).toEqual(400);
+  });
+
+  it('POST /api/v1/undo - undo before any rating', async () => {
+    const res1 = await request.post('/api/v1/newperson').send(person1_survey);
+    expect(res1.status).toEqual(200);
+    expect(res1.body.session_id).toEqual(1);
+    expect(res1.body.cookie_hash).toHaveLength(40);
+
+    const res2 = await request.post('/api/v1/getcategories').send();
+    expect(res2.status).toEqual(200);
+    expect(res2.body.categories.length).toBeGreaterThan(1);
+
+    const res3 = await request.post('/api/v1/fetch').send();
+    expect(res3.status).toEqual(200);
+    expect(res3.body.main_image).toBeDefined();
+    expect(res3.body.main_image.image_id).toBeDefined();
+
+    const res5 = await request.post('/api/v1/undo').send({session_id: res1.body.session_id});
+    expect(res5.status).toEqual(400);
+  });
+
+  it('POST /api/v1/undo - invalid session_id', async () => {
+    const res = await request.post('/api/v1/undo').send({session_id: 1});
+    expect(res.status).toEqual(400);
+  });
 });

@@ -131,6 +131,7 @@ async function create_new_rating({session_id, image_id, category_id, rating}) {
     await c.query('INSERT into undoable (session_id, ts) VALUES ($1, $2) ON CONFLICT (session_id) DO UPDATE SET ts=$3 WHERE undoable.session_id=$4', [session_id, ts, ts, session_id]);
     await c.query('COMMIT');
     debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating}) => {ts: ${ts}}`);
+    return ts;
   } catch (e) {
     await c.query('ROLLBACK');
     debuglog(`ERROR ${e}`);
@@ -138,14 +139,24 @@ async function create_new_rating({session_id, image_id, category_id, rating}) {
   } finally {
     c.release();
   }
+  return null;
 }
 
 async function undo_last_rating({session_id}) {
   const c = await pool.connect();
   try {
     await c.query('BEGIN');
+    const { rows } = await c.query('SELECT ts FROM undoable WHERE session_id = $1', [session_id]);
+    if (rows.length === 0) {
+      await c.query('ROLLBACK');
+      return null;
+    }
+    const [ {ts} ] = rows;
+    await c.query('DELETE FROM rating WHERE session_id = $1 AND ts = $2', [session_id, ts]);
+    await c.query('DELETE FROM undoable WHERE session_id = $1 AND ts = $2', [session_id, ts]);
     await c.query('COMMIT');
     debuglog(`undo_last_rating(${session_id})`);
+    return ts;
   } catch (e) {
     await c.query('ROLLBACK');
     debuglog(`ERROR ${e}`);
@@ -153,6 +164,7 @@ async function undo_last_rating({session_id}) {
   } finally {
     c.release();
   }
+  return null;
 }
 
 router.post('/new',
@@ -162,37 +174,46 @@ router.post('/new',
   body('rating').isInt({min: 1, max: 5}).withMessage('Rating must be a number from 1 to 5'),
 async (req, res) => {
   const errors = validationResult(req);
+  let ts;
   if (!errors.isEmpty()) {
     debuglog(`new(${s(req.body)}) => { errors: ${s(errors.array())} }`);
     return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
   }
 
   try {
-    await create_new_rating(req.body);
+    ts = await create_new_rating(req.body);
   } catch(e) {
     debuglog(`new(${s(req.body)}) => { errors: [${s(e)}] }`);
     return res.status(400).json({ errors: [e.detail] });
   }
-  res.json({status: 'ok'});
+
+  if (ts)
+    res.json({status: 'ok', timestamp: ts});
+  else
+    res.status(400).json({ errors: ['new rating creation failed'] });
 });
 
 router.post('/undo',
   body('session_id').isNumeric({no_symbols: true}).withMessage('Session ID must be a number'),
 async (req, res) => {
   const errors = validationResult(req);
+  let ts;
   if (!errors.isEmpty()) {
-    debuglog(`new(${s(req.body)}) => { errors: ${s(errors.array())} }`);
+    debuglog(`undo(${s(req.body)}) => { errors: ${s(errors.array())} }`);
     return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
   }
 
   try {
-    await undo_last_rating(req.body);
+    ts = await undo_last_rating(req.body);
   } catch(e) {
     debuglog(`undo(${s(req.body)}) => { errors: [${s(e)}] }`);
     return res.status(400).json({ errors: [e.detail] });
   }
 
-  res.json({status: 'ok'});
+  if (ts)
+    res.json({status: 'ok', timestamp: ts});
+  else
+    res.status(400).json({ errors: ['undo failed'] });
 });
 
 router.all('/fetch', async (req, res) => {
