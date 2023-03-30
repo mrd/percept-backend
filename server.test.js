@@ -115,7 +115,8 @@ describe('Rating', () => {
       category_id: res2.body.categories[0].category_id,
       image_id: res3.body.main_image.image_id,
       rating: 3,
-      session_id: res1.body.session_id
+      session_id: res1.body.session_id,
+      cookie_hash: res1.body.cookie_hash
     };
     const res4 = await request.post('/api/v1/new').send(input);
     expect(res4.status).toEqual(200);
@@ -125,7 +126,8 @@ describe('Rating', () => {
       category_id: 1,
       image_id: 1,
       rating: 3,
-      session_id: 'a'
+      session_id: 'a',
+      cookie_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     };
     const res = await request.post('/api/v1/new').send(input);
     expect(res.status).toEqual(400);
@@ -137,7 +139,8 @@ describe('Rating', () => {
       category_id: 1,
       image_id: 1,
       rating: 3,
-      session_id: 2
+      session_id: 2,
+      cookie_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     };
     const res = await request.post('/api/v1/new').send(input);
     expect(res.status).toEqual(400);
@@ -153,7 +156,8 @@ describe('Rating', () => {
       category_id: 1111,
       image_id: 1,
       rating: 3,
-      session_id: 1
+      session_id: 1,
+      cookie_hash: res1.body.cookie_hash
     };
     const res = await request.post('/api/v1/new').send(input);
     expect(res.status).toEqual(400);
@@ -172,7 +176,8 @@ describe('Rating', () => {
       category_id: res2.body.categories[0].category_id,
       image_id: 111111111,
       rating: 3,
-      session_id: 1
+      session_id: 1,
+      cookie_hash: res1.body.cookie_hash
     };
     const res = await request.post('/api/v1/new').send(input);
     expect(res.status).toEqual(400);
@@ -198,7 +203,8 @@ describe('Rating', () => {
       category_id: res2.body.categories[0].category_id,
       image_id: res3.body.main_image.image_id,
       rating: 6,
-      session_id: res1.body.session_id
+      session_id: res1.body.session_id,
+      cookie_hash: res1.body.cookie_hash
     };
     const res4 = await request.post('/api/v1/new').send(input);
     expect(res4.status).toEqual(400);
@@ -225,7 +231,8 @@ describe('Rating', () => {
       category_id: res2.body.categories[0].category_id,
       image_id: res3.body.main_image.image_id,
       rating: 3,
-      session_id: res1.body.session_id
+      session_id: res1.body.session_id,
+      cookie_hash: res1.body.cookie_hash
     };
     const res4 = await request.post('/api/v1/new').send(input);
     expect(res4.status).toEqual(200);
@@ -255,7 +262,8 @@ describe('Rating', () => {
       category_id: res2.body.categories[0].category_id,
       image_id: res3.body.main_image.image_id,
       rating: 3,
-      session_id: res1.body.session_id
+      session_id: res1.body.session_id,
+      cookie_hash: res1.body.cookie_hash
     };
     const res4 = await request.post('/api/v1/new').send(input);
     expect(res4.status).toEqual(200);

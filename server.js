@@ -174,6 +174,7 @@ router.post('/new',
   body('image_id').isNumeric({no_symbols: true}).withMessage('Image ID must be a number'),
   body('category_id').isNumeric({no_symbols: true}).withMessage('Category ID must be a number'),
   body('rating').isInt({min: 1, max: 5}).withMessage('Rating must be a number from 1 to 5'),
+  body('cookie_hash').isLength(40).withMessage('invalid length for cookie_hash'),
 async (req, res) => {
   const errors = validationResult(req);
   let ts;
@@ -271,6 +272,7 @@ async (req, res) => {
 
 router.post('/getsession',
   body('session_id').optional({ checkFalsy: true }).isNumeric({no_symbols: true}).withMessage('session_id must be a number'),
+  body('cookie_hash').optional({ checkFalsy: true }).isLength(40).withMessage('invalid length for cookie_hash'),
 async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
