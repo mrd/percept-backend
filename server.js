@@ -242,7 +242,7 @@ async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
   const langabbr = req.body.langabbr ?? 'en';
-  const { rows } = await pool.query('SELECT shortname, category_id, description FROM category JOIN category_description USING (category_id) WHERE langabbr = $1 ORDER BY category_id', [langabbr]);
+  const { rows } = await pool.query('SELECT t1.v AS shortname, t2.v AS description, category_id FROM category JOIN translation t1 ON (shortname_sid = t1.string_id AND t1.langabbr = $1) JOIN translation t2 ON (description_sid = t2.string_id AND t2.langabbr = $2) ORDER BY category_id', [langabbr, langabbr]);
   res.json({ categories: rows });
 });
 
