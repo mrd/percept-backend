@@ -28,11 +28,6 @@ const s = JSON.stringify;
 app.use(cors());
 app.use(express.json());
 
-app.get('/message', (req, res) => {
-    res.json({ message: "Hello from server!" });
-});
-
-
 async function create_new_person({age, monthly_gross_income, education, gender, postcode, consent}) {
   const c = await pool.connect();
   try {
@@ -302,21 +297,6 @@ async (req, res) => {
   res.json(ret);
 });
 
-router.get('/test', async (req, res) => {
-  console.log('test');
-  //const person_id = await create_new_person({age: 41, monthly_gross_income: '3000-4500', education: 'Postdoctoral', gender: 'Man', postcode: '3582', consent: 'yes'});
-  const person_id = 6;
-  const session_id = await create_or_retrieve_session(person_id);
-  const cookie_hash = await get_cookie_hash(person_id);
-  res.json({
-    person_id: person_id,
-    session_id: session_id,
-    cookie_hash: cookie_hash,
-    cookie_hash_urlencoded: encodeURIComponent(cookie_hash)
-  });
-});
-
-//app.use(express.json());
 app.use('/api/v1',router);
 
 const port = 8000;
