@@ -126,11 +126,11 @@ async function create_new_rating({session_id, image_id, category_id, rating}) {
   const c = await pool.connect();
   try {
     await c.query('BEGIN');
-    const qtxt = 'INSERT into rating (session_id, image_id, category_id, rating) VALUES ($1, $2, $3, $4) RETURNING ts';
-    const { rows: [{ ts }] } = await c.query(qtxt, [session_id, image_id, category_id, rating]);
-    await c.query('INSERT into undoable (session_id, ts) VALUES ($1, $2) ON CONFLICT (session_id) DO UPDATE SET ts=$3 WHERE undoable.session_id=$4', [session_id, ts, ts, session_id]);
+    const qtxt = 'INSERT into rating (session_id, image_id, category_id, rating) VALUES ($1, $2, $3, $4) RETURNING rating_id, ts';
+    const { rows: [{ rating_id, ts }] } = await c.query(qtxt, [session_id, image_id, category_id, rating]);
+    await c.query('INSERT into undoable (session_id, rating_id) VALUES ($1, $2) ON CONFLICT (session_id) DO UPDATE SET rating_id=$3 WHERE undoable.session_id=$4', [session_id, rating_id, rating_id, session_id]);
     await c.query('COMMIT');
-    debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating}) => {ts: ${ts}}`);
+    debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating}) => {rating_id: ${rating_id}, ts: ${ts}`);
     return ts;
   } catch (e) {
     await c.query('ROLLBACK');
@@ -147,22 +147,15 @@ async function undo_last_rating({session_id}) {
   try {
     await c.query('BEGIN');
 
-    const res1 = await c.query('SELECT ts FROM undoable WHERE session_id = $1', [session_id]);
+    const res1 = await c.query('SELECT rating_id, rating.ts AS ts FROM undoable JOIN rating USING (rating_id, session_id) WHERE session_id = $1', [session_id]);
     if (res1.rows.length === 0) {
       await c.query('ROLLBACK');
       return null;
     }
-    const [ {ts} ] = res1.rows;
+    const [ {rating_id, ts} ] = res1.rows;
 
-    const res2 = await c.query('SELECT image_id, category_id, rating FROM rating WHERE session_id = $1 ORDER BY ts DESC LIMIT 1', [session_id]);
-    if (res2.rows.length === 0) {
-      await c.query('ROLLBACK');
-      return null;
-    }
-    const [ {image_id, category_id, rating} ] = res2.rows;
-
-    await c.query('DELETE FROM rating WHERE session_id = $1 AND image_id = $2 AND category_id = $3 AND rating = $4', [session_id, image_id, category_id, rating]);
     await c.query('DELETE FROM undoable WHERE session_id = $1', [session_id]);
+    await c.query('DELETE FROM rating WHERE session_id = $1 AND rating_id = $2', [session_id, rating_id]);
     await c.query('COMMIT');
     debuglog(`undo_last_rating(${session_id})`);
     return ts;
