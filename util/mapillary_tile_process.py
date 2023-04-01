@@ -23,6 +23,9 @@ def process_tile_file(fname, out, opts):
     with open(fname) as fp:
        j = json.load(fp)
     feats = j['features']
+    if opts.size:
+        out.write(f'{fname}: {len(feats)}\n')
+        return
     for feat in feats: 
         geo = feat['geometry']
         props = feat['properties']
@@ -87,6 +90,7 @@ def main():
     parser.add_argument('--output', '-o', default='-', help='output transcript file')
     parser.add_argument('--shdestdir', '-s', default=None, help='destination dir for output of shell files')
     parser.add_argument('--verbose', '-v', default=False, action='store_true', help='Verbose mode')
+    parser.add_argument('--size', default=False, action='store_true', help='Just show size of tile file mode')
     parser.add_argument('--overwrite', '-O', default=False, action='store_true', help='Overwrite shell files mode')
     parser.add_argument('--cityname', '-C', default='Amsterdam', help='name of city covering tiles')
     parser.add_argument('--dirprefix', '-D', default='/data/img/mapillary', help='prefix of system path for images')
