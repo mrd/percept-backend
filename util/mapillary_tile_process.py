@@ -40,16 +40,17 @@ def process_tile_file(fname, out, opts):
         dstfile = Path(opts.dirprefix) / opts.cityname / str(seq_id) / str(mapimg_id)
         imgfile_e = os.path.exists(imgfilejpg)
         shdestfile = (Path(opts.shdestdir) / opts.cityname / str(seq_id) / str(mapimg_id)).with_suffix(".sh") if opts.shdestdir else None
-        if not opts.overwrite and shdestfile and os.path.exists(shdestfile): continue
+        if not opts.overwrite and shdestfile and os.path.exists(shdestfile) and os.path.getsize(shdestfile) > 0: continue
         output = ""
         def outwrite(s):
             nonlocal output
             output += s
         if opts.verbose:
             print(f'entry {seq_id}/{mapimg_id} at {lat:.4f},{lon:.4f} facing {angle:.2f}deg, is_pano={is_pano} downloaded={imgfile_e}')
-        if(imgfile_e):
-            w, h = jpg_file_info(imgfilejpg)
-            if w:
+        if imgfile_e:
+            size = jpg_file_info(imgfilejpg)
+            if size:
+                w, h = size
                 if opts.verbose:
                     print(f'    w={w} h={h}')
 
@@ -61,27 +62,26 @@ def process_tile_file(fname, out, opts):
                     outwrite(f"INSERT INTO image_geo (geo, angle_deg, image_id) SELECT {pt} AS geo, {a} AS angle_deg, image_id FROM image WHERE system_path='{dstfilejpg}' ON CONFLICT DO NOTHING;\n")
                     outwrite("EOF\n")
 
+                outwrite(f'mkdir -p \'{dstfile.parent}\'\n')
                 if is_pano:
-                    w2 = w // 2
-                    dstfilejpg1=dstfile.with_stem(imgfile.stem+'_1').with_suffix('.jpg')
-                    dstfilejpg2=dstfile.with_stem(imgfile.stem+'_2').with_suffix('.jpg')
-                    outwrite(f'mkdir -p \'{dstfile.parent}\'\n')
-                    outwrite(f'[[ "`file -bi \'{dstfilejpg1}\'`" =~ "jpeg" ]] || convert \'{imgfilejpg}\' -crop {w2}x{h}+0+0 -scale {outw}x{outh}\! \'{dstfilejpg1}\'\n')
-                    outwrite(f'[[ "`file -bi \'{dstfilejpg2}\'`" =~ "jpeg" ]] || convert \'{imgfilejpg}\' -crop {w2}x{h}+{w2}+0 -scale {outw}x{outh}\! \'{dstfilejpg2}\'\n')
-                    a1 = (angle-90)%360 if angle != 0 else 0
-                    a2 = (angle+90)%360 if angle != 0 else 0
-                    sqlout(dstfilejpg1, a1)
-                    sqlout(dstfilejpg2, a2)
+                    w4 = w // 4
+                    h4 = h // 4
+                    hFor43ratio = (w4 * 3) // 4
+                    for i in range(4):
+                        dstfilejpg=dstfile.with_stem(f'{imgfile.stem}_{i+1}').with_suffix('.jpg')
+                        outwrite(f'[[ "`file -bi \'{dstfilejpg}\'`" =~ "jpeg" ]] || convert \'{imgfilejpg}\' -crop {w4}x{hFor43ratio}+{i*w4}+{h4} -scale {outw}x{outh}\! \'{dstfilejpg}\'\n')
+                        a = (angle-135 + i*90)%360 if angle != 0 else 0
+                        sqlout(dstfilejpg, a)
                 else:
                     dstfilejpg=dstfile.with_suffix('.jpg')
                     outwrite(f'[[ "`file -bi \'{dstfilejpg}\'`" =~ "jpeg" ]] || convert \'{imgfilejpg}\' -scale {outw}x{outh}\! \'{dstfilejpg}\'\n')
                     sqlout(dstfilejpg)
-        if shdestfile:
-            os.makedirs(shdestfile.parent, exist_ok=True)
-            with open(shdestfile,'w') as fp:
-                fp.write(output)
-        else:
-            out.write(output)
+                if shdestfile:
+                    os.makedirs(shdestfile.parent, exist_ok=True)
+                    with open(shdestfile,'w') as fp:
+                        fp.write(output)
+                else:
+                    out.write(output)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -95,8 +95,8 @@ def main():
     parser.add_argument('--cityname', '-C', default='Amsterdam', help='name of city covering tiles')
     parser.add_argument('--dirprefix', '-D', default='/data/img/mapillary', help='prefix of system path for images')
     parser.add_argument('--urlprefix', '-U', default='/img/mapillary', help='prefix of URL for images')
-    parser.add_argument('--outw', '-W', default=512, help='Width of output images')
-    parser.add_argument('--outh', '-H', default=512, help='Height of output images')
+    parser.add_argument('--outw', '-W', default=640, help='Width of output images')
+    parser.add_argument('--outh', '-H', default=480, help='Height of output images')
 
     args = parser.parse_args()
 
