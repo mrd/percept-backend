@@ -227,6 +227,12 @@ async (req, res) => {
     res.status(400).json({ errors: ['undo failed'] });
 });
 
+async function old_fetch_method(res) {
+    const { rows } = await pool.query('SELECT cityname,url,image_id FROM image ORDER BY random() LIMIT 4');
+
+    return res.json({ main_image: rows[0], impressions: rows.slice(1) });
+}
+
 router.all('/fetch', async (req, res) => {
     const res1 = await pool.query('SELECT cityname,url,image_id FROM image ORDER BY random() LIMIT 1');
     if (res1.rows.length === 0) {
@@ -236,14 +242,15 @@ router.all('/fetch', async (req, res) => {
 
     const res2 = await pool.query('SELECT i2.image_id FROM image_geo i1 JOIN image_geo i2 on (st_dwithin(i1.geo97415, i2.geo97415, 500)) WHERE i1.image_id = $1 LIMIT 3', [res1.rows[0].image_id]);
     if (res2.rows.length !== 3) {
-      return res.status(400).json({ errors: ['second select failed'] });
+      return await old_fetch_method(res);
     }
 
     const params = [res2.rows[0].image_id, res2.rows[1].image_id, res2.rows[2].image_id]
     const qtxt = 'SELECT cityname,url,image_id FROM image WHERE image_id IN ($1, $2, $3)';
     const res3 = await pool.query(qtxt, params);
+
     if (!res3.rows || res3.rows.length !== 3) {
-      return res.status(400).json({ errors: ['third select failed'] });
+      return await old_fetch_method(res);
     }
 
     res.json({
