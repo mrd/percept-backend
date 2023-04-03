@@ -240,7 +240,7 @@ router.all('/fetch', async (req, res) => {
     }
     const main_image = res1.rows[0];
 
-    const res2 = await pool.query('SELECT i2.image_id FROM image_geo i1 JOIN image_geo i2 on (st_dwithin(i1.geo97415, i2.geo97415, 500)) WHERE i1.image_id = $1 LIMIT 3', [res1.rows[0].image_id]);
+    const res2 = await pool.query('SELECT i2.image_id FROM image_geo i1 JOIN image_geo i2 on (st_dwithin(i1.geo97415, i2.geo97415, 500)) WHERE i1.image_id = $1 ORDER BY random() LIMIT 3', [res1.rows[0].image_id]);
     if (res2.rows.length !== 3) {
       return await old_fetch_method(res);
     }
