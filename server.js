@@ -271,6 +271,7 @@ async (req, res) => {
 router.post(
   '/newperson',
   body('age').isNumeric({no_symbols: true}).withMessage('Age must be a number'),
+  body('monthly_gross_income').optional({ checkFalsy: true }).isNumeric({no_symbols: true}).withMessage('Monthly gross income must be a number'),
   body('consent').isBoolean(),
 async (req, res) => {
   
