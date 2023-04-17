@@ -59,7 +59,7 @@ describe('Fetch data', () => {
 describe('New person', () => {
   const person1_survey = {
          age: '25',
-         monthly_gross_income: '0-1500',
+         monthly_gross_income: '1500',
          education: 'Bachelors',
          gender: 'Woman',
          postcode: '3000',
@@ -90,7 +90,7 @@ describe('New person', () => {
 describe('Rating', () => {
   const person1_survey = {
     age: '19',
-    monthly_gross_income: '1500-3000',
+    monthly_gross_income: '3000',
     education: 'In University',
     gender: 'Non-binary',
     postcode: '3584 CS',
