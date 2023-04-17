@@ -83,7 +83,7 @@ async function get_cookie_hash(person_id) {
 
     await c.query('BEGIN');
 
-    const { rows: [{cookie_hash}] } = await c.query("INSERT INTO cookie (cookie_hash, person_id) VALUES (sha224($1),$2) RETURNING encode(cookie_hash,'base64') AS cookie_hash", [person_id, person_id]);
+    const { rows: [{cookie_hash}] } = await c.query("INSERT INTO cookie (cookie_hash, person_id) VALUES (sha224(($1||'_'||now())::bytea),$2) RETURNING encode(cookie_hash,'base64') AS cookie_hash", [person_id, person_id]);
 
     await c.query('COMMIT');
     return cookie_hash;
