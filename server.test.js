@@ -120,6 +120,7 @@ describe('Rating', () => {
     };
     const res4 = await request.post('/api/v1/new').send(input);
     expect(res4.status).toEqual(200);
+    expect(res4.body.session_rating_count).toEqual(1);
   });
   it('POST /api/v1/new - malformed session', async () => {
     const input = {

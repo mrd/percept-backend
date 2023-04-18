@@ -143,6 +143,14 @@ async function create_new_rating({session_id, image_id, category_id, rating}) {
   return null;
 }
 
+async function count_ratings({session_id}) {
+  const res = await pool.query('SELECT count(*) FROM rating WHERE session_id = $1', [session_id]);
+  if (res.rows.length === 0)
+    return 0;
+  const [ {count} ] = res.rows;
+  return parseInt(count);
+}
+
 async function undo_last_rating({session_id}) {
   const c = await pool.connect();
   try {
@@ -195,7 +203,7 @@ async (req, res) => {
   }
 
   if (ts)
-    res.json({status: 'ok', timestamp: ts});
+    res.json({status: 'ok', timestamp: ts, session_rating_count: await count_ratings(req.body)});
   else
     res.status(400).json({ errors: ['new rating creation failed'] });
 });
