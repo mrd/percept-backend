@@ -62,6 +62,7 @@ describe('New person', () => {
          monthly_gross_income: '1500',
          education: 'Bachelors',
          gender: 'Woman',
+         country: 'NL',
          postcode: '3000',
          consent: true
       };
@@ -93,6 +94,7 @@ describe('Rating', () => {
     monthly_gross_income: '3000',
     education: 'In University',
     gender: 'Non-binary',
+    country: 'NL',
     postcode: '3584 CS',
     consent: true
   };

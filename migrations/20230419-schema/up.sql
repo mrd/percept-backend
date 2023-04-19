@@ -22,6 +22,7 @@ CREATE TABLE survey (
     education TEXT,
     gender TEXT,
     postalcode TEXT,
+    country TEXT,
     consent BOOLEAN
 );
 

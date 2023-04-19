@@ -28,14 +28,14 @@ const s = JSON.stringify;
 app.use(cors());
 app.use(express.json());
 
-async function create_new_person({age, monthly_gross_income, education, gender, postcode, consent}) {
+async function create_new_person({age, monthly_gross_income, education, gender, country, postcode, consent}) {
   const c = await pool.connect();
   try {
     await c.query('BEGIN');
 
     // insert survey entry
-    const qtxt1 = 'INSERT INTO survey (age, monthly_gross_income, education, gender, postalcode, consent) VALUES ($1,$2,$3,$4,$5,$6) RETURNING survey_id';
-    const { rows: [{ survey_id }] } = await c.query(qtxt1, [age, monthly_gross_income, education, gender, postcode, consent]);
+    const qtxt1 = 'INSERT INTO survey (age, monthly_gross_income, education, gender, country, postalcode, consent) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING survey_id';
+    const { rows: [{ survey_id }] } = await c.query(qtxt1, [age, monthly_gross_income, education, gender, country, postcode, consent]);
 
     // insert person entry
     const { rows: [{ person_id }] } = await c.query('INSERT INTO person (survey_id) VALUES ($1) RETURNING person_id', [survey_id]);
@@ -291,6 +291,7 @@ async (req, res) => {
     monthly_gross_income: clean(req.body.monthly_gross_income || ''),
     education: clean(req.body.education || ''),
     gender: clean(req.body.gender || ''),
+    country: clean(req.body.country || ''),
     postcode: clean(req.body.postcode || ''),
     consent: req.body.consent
   };
