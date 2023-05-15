@@ -236,7 +236,7 @@ async (req, res) => {
 });
 
 router.all('/fetch', async (req, res) => {
-  const { rows } = await pool.query('SELECT cityname,url,image_id FROM image ORDER BY random() LIMIT 1');
+  const { rows } = await pool.query('SELECT cityname,url,image_id FROM image WHERE enabled IS true ORDER BY random() LIMIT 1');
   return res.json({ main_image: rows[0] });
 });
 
