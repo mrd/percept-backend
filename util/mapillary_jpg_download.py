@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # Mapillary image download script. See README.md.
+#
+# This script is provided as-is. The usage of this script, compliance with
+# Mapillary licencing and acceptable use terms, as well as any Internet service
+# provider terms, is entirely your responsibility.
+#
 # Licence:
-#   Copyright 2003 Matthew Danish
+#   Copyright 2023 Matthew Danish
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
