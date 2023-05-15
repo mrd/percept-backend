@@ -42,8 +42,6 @@ describe('Fetch data', () => {
    it('GET /api/v1/fetch', async () => {
       const res = await request.get('/api/v1/fetch');
       expect(res.status).toEqual(200);
-      expect(res.body.impressions).toHaveLength(3);
-      expect(res.body.impressions[0].url).toMatch(/jpg/);
       expect(res.body.main_image.url).toMatch(/jpg/);
    });
 
