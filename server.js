@@ -143,6 +143,15 @@ async function create_new_rating({session_id, image_id, category_id, rating}) {
   return null;
 }
 
+async function count_ratings_by_category({session_id}) {
+  const res = await pool.query('SELECT category_id, count(*) FROM rating WHERE session_id = $1 GROUP BY category_id', [session_id]);
+  let counts = {};
+  for (const { category_id, count } of res.rows) {
+    counts[parseInt(category_id)] = parseInt(count);
+  }
+  return { category_counts: counts };
+}
+
 async function count_ratings({session_id}) {
   const res = await pool.query('SELECT count(*) FROM rating WHERE session_id = $1', [session_id]);
   if (res.rows.length === 0)
@@ -203,7 +212,8 @@ async (req, res) => {
   }
 
   if (ts)
-    res.json({status: 'ok', timestamp: ts, session_rating_count: await count_ratings(req.body)});
+    res.json({status: 'ok', timestamp: ts, session_rating_count: await count_ratings(req.body),
+              ...await count_ratings_by_category(req.body)});
   else
     res.status(400).json({ errors: ['new rating creation failed'] });
 });
@@ -230,7 +240,7 @@ async (req, res) => {
   }
 
   if (ts)
-    res.json({status: 'ok', timestamp: ts});
+    res.json({status: 'ok', timestamp: ts, ...await count_ratings_by_category(req.body)});
   else
     res.status(400).json({ errors: ['undo failed'] });
 });
@@ -255,6 +265,17 @@ async (req, res) => {
   const langabbr = req.body.langabbr ?? 'en';
   const { rows } = await pool.query('SELECT t1.v AS shortname, t2.v AS description, category_id FROM category JOIN translation t1 ON (shortname_sid = t1.string_id AND t1.langabbr = $1) JOIN translation t2 ON (description_sid = t2.string_id AND t2.langabbr = $2) ORDER BY category_id', [langabbr, langabbr]);
   res.json({ categories: rows });
+});
+
+router.all('/countratingsbycategory',
+  body('session_id').isNumeric({no_symbols: true}).withMessage('Session ID must be a number'),
+async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    debuglog(`fetch(${s(req.body)}) => { errors: ${s(errors.array())} }`);
+    return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
+  }
+  res.json(await count_ratings_by_category(req.body));
 });
 
 router.post(
