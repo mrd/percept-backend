@@ -235,8 +235,15 @@ async (req, res) => {
     res.status(400).json({ errors: ['undo failed'] });
 });
 
-router.all('/fetch', async (req, res) => {
-  const { rows } = await pool.query('SELECT cityname,url,image_id FROM image WHERE enabled IS true ORDER BY random() LIMIT 1');
+router.all('/fetch',
+  body('session_id').isNumeric({no_symbols: true}).withMessage('Session ID must be a number'),
+async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    debuglog(`fetch(${s(req.body)}) => { errors: ${s(errors.array())} }`);
+    return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
+  }
+  const { rows } = await pool.query('SELECT cityname,url,image_id FROM image WHERE enabled IS true AND image_id NOT IN (SELECT image_id FROM rating WHERE session_id = $1) ORDER BY random() LIMIT 1', [req.body.session_id]);
   return res.json({ main_image: rows[0] });
 });
 
