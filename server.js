@@ -269,6 +269,23 @@ async function get_category_averages({session_id}) {
   return avgs;
 }
 
+async function get_minmax_images({session_id}) {
+  const qMin = `SELECT * FROM (SELECT url, rating, category_id, ROW_NUMBER () OVER (PARTITION BY category_id ORDER BY rating) rn FROM rating JOIN image USING (image_id) WHERE session_id = $1) q WHERE rn = 1`;
+  const qMax = `SELECT * FROM (SELECT url, rating, category_id, ROW_NUMBER () OVER (PARTITION BY category_id ORDER BY rating DESC) rn FROM rating JOIN image USING (image_id) WHERE session_id = $1) q WHERE rn = 1`;
+
+  const { rows: rowsMin } = await pool.query(qMin, [session_id]);
+  let minImages = [];
+  for (const {url, rating, category_id} of rowsMin)
+    minImages.push({url, rating, category_id});
+
+  const { rows: rowsMax } = await pool.query(qMax, [session_id]);
+  let maxImages = [];
+  for (const {url, rating, category_id} of rowsMax)
+    maxImages.push({url, rating, category_id});
+
+  return { minImages, maxImages };
+}
+
 router.all('/getstats',
   body('session_id').isNumeric({no_symbols: true}).withMessage('Session ID must be a number'),
 async (req, res) => {
@@ -278,7 +295,7 @@ async (req, res) => {
     return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
   }
   const avgs = await get_category_averages(req.body);
-  return res.json({ averages: avgs });
+  return res.json({ averages: avgs, ...await get_minmax_images(req.body) });
 });
 
 router.all('/getcategories',
