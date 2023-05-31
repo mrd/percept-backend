@@ -240,8 +240,7 @@ async (req, res) => {
   }
 
   if (ts)
-    res.json({status: 'ok', timestamp: ts, ...await count_ratings_by_category(req.body),
-              ...await count_ratings_by_category(req.body)});
+    res.json({status: 'ok', timestamp: ts, ...await count_ratings_by_category(req.body)});
   else
     res.status(400).json({ errors: ['undo failed'] });
 });
