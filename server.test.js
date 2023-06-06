@@ -10,32 +10,32 @@ const { globSync, Glob } = require('glob');
 
 
 beforeEach(
-   async() => {
-      //app.pool = new Pool({database: testdbname, host: testdbhost});
-      const upfiles = new globSync('migrations/**/up.sql').sort();
-      for (const file of upfiles) {
-        //console.log(`loading ${file} from ${upfiles}`);
-        const sql = fs.readFileSync(file).toString();
-        await app.pool.query(sql);
-      }
-      const seedfiles = new globSync('seeds/{test,all}/*.sql').sort();
-      for (const file of seedfiles) {
-        const sql = fs.readFileSync(file).toString();
-        await app.pool.query(sql);
-      }
-   }
+  async() => {
+    //app.pool = new Pool({database: testdbname, host: testdbhost});
+    const upfiles = new globSync('migrations/**/up.sql').sort();
+    for (const file of upfiles) {
+      //console.log(`loading ${file} from ${upfiles}`);
+      const sql = fs.readFileSync(file).toString();
+      await app.pool.query(sql);
+    }
+    const seedfiles = new globSync('seeds/{test,all}/*.sql').sort();
+    for (const file of seedfiles) {
+      const sql = fs.readFileSync(file).toString();
+      await app.pool.query(sql);
+    }
+  }
 );
 
 afterEach(
-   async() => {
-      //await app.pool.end();
-      const downfiles = new globSync('migrations/**/down.sql').sort().reverse();
-      for (const file of downfiles) {
-        //console.log(`loading ${file}`);
-        const sql = fs.readFileSync(file).toString();
-        await app.pool.query(sql);
-      }
-   }
+  async() => {
+    //await app.pool.end();
+    const downfiles = new globSync('migrations/**/down.sql').sort().reverse();
+    for (const file of downfiles) {
+      //console.log(`loading ${file}`);
+      const sql = fs.readFileSync(file).toString();
+      await app.pool.query(sql);
+    }
+  }
 );
 
 describe('Fetch data', () => {
@@ -43,17 +43,17 @@ describe('Fetch data', () => {
     session_id: 0
   };
   it('POST /api/v1/fetch', async () => {
-     const res = await request.post('/api/v1/fetch').send(req1);
-     expect(res.status).toEqual(200);
-     expect(res.body.main_image.url).toMatch(/jpg/);
+    const res = await request.post('/api/v1/fetch').send(req1);
+    expect(res.status).toEqual(200);
+    expect(res.body.main_image.url).toMatch(/jpg/);
   });
 
   it('GET /api/v1/getcategories', async () => {
-     const res = await request.get('/api/v1/getcategories');
-     expect(res.status).toEqual(200);
-     expect(res.body.categories.length).toBeGreaterThan(1);
-     expect(res.body.categories[0].shortname.length).toBeGreaterThan(1);
-     expect(res.body.categories[0].description.length).toBeGreaterThan(1);
+    const res = await request.get('/api/v1/getcategories');
+    expect(res.status).toEqual(200);
+    expect(res.body.categories.length).toBeGreaterThan(1);
+    expect(res.body.categories[0].shortname.length).toBeGreaterThan(1);
+    expect(res.body.categories[0].description.length).toBeGreaterThan(1);
   });
   it('POST /api/v1/getstats', async () => {
     const res = await request.post('/api/v1/getstats').send(req1);
