@@ -131,7 +131,7 @@ async function create_new_rating({session_id, image_id, category_id, rating}) {
     const { rows: [{ rating_id, ts }] } = await c.query(qtxt, [session_id, image_id, category_id, rating]);
     await c.query('INSERT into undoable (session_id, rating_id) VALUES ($1, $2) ON CONFLICT (session_id) DO UPDATE SET rating_id=$3 WHERE undoable.session_id=$4', [session_id, rating_id, rating_id, session_id]);
     await c.query('COMMIT');
-    debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating}) => {rating_id: ${rating_id}, ts: ${ts}`);
+    debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating}) => {rating_id: ${rating_id}, ts: ${ts}}`);
     return ts;
   } catch (e) {
     await c.query('ROLLBACK');
