@@ -55,6 +55,18 @@ describe('Fetch data', () => {
      expect(res.body.categories[0].shortname.length).toBeGreaterThan(1);
      expect(res.body.categories[0].description.length).toBeGreaterThan(1);
   });
+  it('POST /api/v1/getstats', async () => {
+    const res = await request.post('/api/v1/getstats').send(req1);
+    expect(res.status).toEqual(200);
+    expect(Object.entries(res.body.averages).length).toEqual(0);
+    expect(res.body.minImages.length).toEqual(0);
+    expect(res.body.maxImages.length).toEqual(0);
+  });
+  it('POST /api/v1/countratingsbycategory', async () => {
+    const res = await request.post('/api/v1/countratingsbycategory').send(req1);
+    expect(res.status).toEqual(200);
+    expect(Object.entries(res.body.category_counts).length).toEqual(0);
+  });
 });
 
 describe('New person', () => {
@@ -124,6 +136,18 @@ describe('Rating', () => {
     const res4 = await request.post('/api/v1/new').send(input);
     expect(res4.status).toEqual(200);
     expect(res4.body.session_rating_count).toEqual(1);
+    expect(res4.body.category_counts[res2.body.categories[0].category_id]).toEqual(1);
+
+    const res5 = await request.post('/api/v1/getstats').send(input);
+    expect(res5.status).toEqual(200);
+    expect(Object.entries(res5.body.averages).length).toEqual(1);
+    expect(parseInt(res5.body.averages[res2.body.categories[0].category_id])).toEqual(input.rating);
+    expect(res5.body.minImages.length).toEqual(1);
+    expect(res5.body.maxImages.length).toEqual(1);
+
+    const res6 = await request.post('/api/v1/countratingsbycategory').send(input);
+    expect(res6.status).toEqual(200);
+    expect(res6.body.category_counts[res2.body.categories[0].category_id]).toEqual(1);
   });
   it('POST /api/v1/new - malformed session', async () => {
     const input = {
