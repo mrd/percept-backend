@@ -39,19 +39,22 @@ afterEach(
 );
 
 describe('Fetch data', () => {
-   it('GET /api/v1/fetch', async () => {
-      const res = await request.get('/api/v1/fetch');
-      expect(res.status).toEqual(200);
-      expect(res.body.main_image.url).toMatch(/jpg/);
-   });
+  const req1 = {
+    session_id: 0
+  };
+  it('POST /api/v1/fetch', async () => {
+     const res = await request.post('/api/v1/fetch').send(req1);
+     expect(res.status).toEqual(200);
+     expect(res.body.main_image.url).toMatch(/jpg/);
+  });
 
-   it('GET /api/v1/getcategories', async () => {
-      const res = await request.get('/api/v1/getcategories');
-      expect(res.status).toEqual(200);
-      expect(res.body.categories.length).toBeGreaterThan(1);
-      expect(res.body.categories[0].shortname.length).toBeGreaterThan(1);
-      expect(res.body.categories[0].description.length).toBeGreaterThan(1);
-   });
+  it('GET /api/v1/getcategories', async () => {
+     const res = await request.get('/api/v1/getcategories');
+     expect(res.status).toEqual(200);
+     expect(res.body.categories.length).toBeGreaterThan(1);
+     expect(res.body.categories[0].shortname.length).toBeGreaterThan(1);
+     expect(res.body.categories[0].description.length).toBeGreaterThan(1);
+  });
 });
 
 describe('New person', () => {
@@ -106,7 +109,7 @@ describe('Rating', () => {
     expect(res2.status).toEqual(200);
     expect(res2.body.categories.length).toBeGreaterThan(1);
 
-    const res3 = await request.post('/api/v1/fetch').send();
+    const res3 = await request.post('/api/v1/fetch').send(res1.body);
     expect(res3.status).toEqual(200);
     expect(res3.body.main_image).toBeDefined();
     expect(res3.body.main_image.image_id).toBeDefined();
@@ -195,7 +198,7 @@ describe('Rating', () => {
     expect(res2.status).toEqual(200);
     expect(res2.body.categories.length).toBeGreaterThan(1);
 
-    const res3 = await request.post('/api/v1/fetch').send();
+    const res3 = await request.post('/api/v1/fetch').send(res1.body);
     expect(res3.status).toEqual(200);
     expect(res3.body.main_image).toBeDefined();
     expect(res3.body.main_image.image_id).toBeDefined();
@@ -223,7 +226,7 @@ describe('Rating', () => {
     expect(res2.status).toEqual(200);
     expect(res2.body.categories.length).toBeGreaterThan(1);
 
-    const res3 = await request.post('/api/v1/fetch').send();
+    const res3 = await request.post('/api/v1/fetch').send(res1.body);
     expect(res3.status).toEqual(200);
     expect(res3.body.main_image).toBeDefined();
     expect(res3.body.main_image.image_id).toBeDefined();
@@ -254,7 +257,7 @@ describe('Rating', () => {
     expect(res2.status).toEqual(200);
     expect(res2.body.categories.length).toBeGreaterThan(1);
 
-    const res3 = await request.post('/api/v1/fetch').send();
+    const res3 = await request.post('/api/v1/fetch').send(res1.body);
     expect(res3.status).toEqual(200);
     expect(res3.body.main_image).toBeDefined();
     expect(res3.body.main_image.image_id).toBeDefined();
@@ -289,7 +292,7 @@ describe('Rating', () => {
     expect(res2.status).toEqual(200);
     expect(res2.body.categories.length).toBeGreaterThan(1);
 
-    const res3 = await request.post('/api/v1/fetch').send();
+    const res3 = await request.post('/api/v1/fetch').send(res1.body);
     expect(res3.status).toEqual(200);
     expect(res3.body.main_image).toBeDefined();
     expect(res3.body.main_image.image_id).toBeDefined();
