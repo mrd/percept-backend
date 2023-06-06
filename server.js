@@ -294,7 +294,9 @@ async (req, res) => {
     return res.status(400).json({ errors: errors.array().map((e) => e.msg) });
   }
   const avgs = await get_category_averages(req.body);
-  return res.json({ averages: avgs, ...await get_minmax_images(req.body) });
+  const json = { averages: avgs, ...await get_minmax_images(req.body) }
+  //debuglog(`getstats(${s(req.body)}) => ${s(json)}`);
+  return res.json(json);
 });
 
 router.all('/getcategories',
