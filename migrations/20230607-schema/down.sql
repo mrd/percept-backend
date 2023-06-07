@@ -1,0 +1,1 @@
+ALTER TABLE string DROP COLUMN k;
