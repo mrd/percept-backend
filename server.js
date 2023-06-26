@@ -7,6 +7,7 @@ const { dbname, dbhost, testdbname, testdbhost } = require('./config.js');
 const DOMPurify = require('isomorphic-dompurify');
 
 const app = express();
+app.set('trust proxy', 'loopback');
 
 let pool;
 if (process.env.NODE_ENV === 'test') {
@@ -75,15 +76,18 @@ async function create_or_retrieve_session(person_id) {
   }
 }
 
-async function get_cookie_hash(person_id) {
+async function get_cookie_hash(req, person_id) {
   const c = await pool.connect();
+  const ip = req.ip;
+  const ua = req.get('User-Agent') || '';
   try {
     const { rows } = await c.query("SELECT encode(cookie_hash, 'base64') FROM cookie WHERE person_id=$1 AND (expiration IS NULL OR expiration > now())", [person_id]);
     if (rows.length > 0) return rows[0]['cookie_hash'];
 
     await c.query('BEGIN');
 
-    const { rows: [{cookie_hash}] } = await c.query("INSERT INTO cookie (cookie_hash, person_id) VALUES (sha224(($1||'_'||now())::bytea),$2) RETURNING encode(cookie_hash,'base64') AS cookie_hash", [person_id, person_id]);
+    await c.query('INSERT INTO useragent (useragent_id, useragent_str) VALUES (md5($1)::uuid,$2) ON CONFLICT DO NOTHING', [ua, ua]);
+    const { rows: [{cookie_hash}] } = await c.query("INSERT INTO cookie (cookie_hash, person_id, useragent_id, ipaddr) VALUES (sha224(($1||'_'||now())::bytea),$2, md5($3)::uuid, $4) RETURNING encode(cookie_hash,'base64') AS cookie_hash", [person_id, person_id, ua, ip]);
 
     await c.query('COMMIT');
     return cookie_hash;
@@ -123,15 +127,18 @@ async function check_cookie_hash({session_id, cookie_hash}) {
   return (rows.length !== 0);
 }
 
-async function create_new_rating({session_id, image_id, category_id, rating}) {
+async function create_new_rating(req, {session_id, image_id, category_id, rating}) {
   const c = await pool.connect();
+  const ip = req.ip;
+  const ua = req.get('User-Agent') || '';
   try {
     await c.query('BEGIN');
-    const qtxt = 'INSERT into rating (session_id, image_id, category_id, rating) VALUES ($1, $2, $3, $4) RETURNING rating_id, ts';
-    const { rows: [{ rating_id, ts }] } = await c.query(qtxt, [session_id, image_id, category_id, rating]);
+    await c.query('INSERT INTO useragent (useragent_id, useragent_str) VALUES (md5($1)::uuid,$2) ON CONFLICT DO NOTHING', [ua, ua]);
+    const qtxt = 'INSERT INTO rating (session_id, image_id, category_id, rating, useragent_id, ipaddr) VALUES ($1, $2, $3, $4, md5($5)::uuid, $6) RETURNING rating_id, ts';
+    const { rows: [{ rating_id, ts }] } = await c.query(qtxt, [session_id, image_id, category_id, rating, ua, ip]);
     await c.query('INSERT into undoable (session_id, rating_id) VALUES ($1, $2) ON CONFLICT (session_id) DO UPDATE SET rating_id=$3 WHERE undoable.session_id=$4', [session_id, rating_id, rating_id, session_id]);
     await c.query('COMMIT');
-    debuglog(`create_new_rating(${session_id}, ${image_id}, ${category_id}, ${rating}) => {rating_id: ${rating_id}, ts: ${ts}}`);
+    debuglog(`create_new_rating(${ip}, ${ua}, ${session_id}, ${image_id}, ${category_id}, ${rating}) => {rating_id: ${rating_id}, ts: ${ts}}`);
     return ts;
   } catch (e) {
     await c.query('ROLLBACK');
@@ -205,7 +212,7 @@ async (req, res) => {
     return res.status(400).json({ errors: ['invalid authentication or session_id not present'] });
 
   try {
-    ts = await create_new_rating(req.body);
+    ts = await create_new_rating(req, req.body);
   } catch(e) {
     debuglog(`new(${s(req.body)}) => { errors: [${s(e)}] }`);
     return res.status(400).json({ errors: [e.detail] });
@@ -342,7 +349,7 @@ async (req, res) => {
 
   const person_id = await create_new_person(args);
   const session_id = await create_or_retrieve_session(person_id);
-  const cookie_hash = await get_cookie_hash(person_id);
+  const cookie_hash = await get_cookie_hash(req, person_id);
   const ret = {
     session_id: session_id,
     cookie_hash: cookie_hash,
@@ -367,7 +374,9 @@ async (req, res) => {
     cookie_hash: cookie_hash,
     session_id: session_id
   };
-  debuglog(`getsession(${s({session_id: session_id, cookie_hash: cookie_hash})}) => ${s(ret)}`);
+  const ip = req.ip;
+  const ua = req.get('User-Agent');
+  debuglog(`getsession(${ip},${ua},${s({session_id: session_id, cookie_hash: cookie_hash})}) => ${s(ret)}`);
   res.json(ret);
 });
 
