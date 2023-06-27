@@ -21,6 +21,7 @@ template = Template("""
 def parse_arguments():
   parser = argparse.ArgumentParser(description='Generate a report about the Percept data')
   parser.add_argument('--db', '-d', type=str, help='Database name', default='percept-dev')
+  parser.add_argument('--datetime', type=str, help='Act as if this was the current timestamp (ISO-8601 format)', default=None)
   args = parser.parse_args()
   return args
 
@@ -39,20 +40,20 @@ def main():
     if row: params[field + '_diff1w'] = row[0]
 
   args = parse_arguments()
+  ts = f"'{args.datetime}'::timestamp" if args.datetime is not None else 'current_timestamp'
   conn = psycopg2.connect(
     database=args.db
   )
 
   cursor = conn.cursor()
 
-  cursor.execute("SELECT to_char(current_timestamp, 'YYYY-MM-DD HH:MI')")
+  cursor.execute(f"SELECT to_char({ts}, 'YYYY-MM-DD HH:MI')")
   row = cursor.fetchone()
   if row: params['date'] = row[0]
 
-  q("SELECT count(*) FROM rrating WHERE ts >= current_timestamp - interval '%s days'", 'rating_count')
-  q("select count(*) from session join person using (person_id) join survey using (survey_id) where session_start >= current_timestamp - interval '%s day' and age >= 18", 'survey_count')
-  q("select count(distinct image_id) from rrating where ts >= current_timestamp - interval '%s day'", 'rated_image_count')
-
+  q(f"SELECT count(*) FROM rrating WHERE ts <= {ts} AND ts >= {ts} - interval '%s days'", 'rating_count')
+  q(f"SELECT count(*) FROM session JOIN person USING (person_id) JOIN survey USING (survey_id) WHERE session_start <= {ts} AND session_start >= {ts} - interval '%s day' AND age >= 18", 'survey_count')
+  q(f"SELECT count(distinct image_id) FROM rrating WHERE ts <= {ts} AND ts >= {ts} - interval '%s day'", 'rated_image_count')
 
   html = template.render(**params)
   print(html)
