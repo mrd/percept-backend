@@ -47,7 +47,7 @@ def main():
 
   cursor = conn.cursor()
 
-  cursor.execute(f"SELECT to_char({ts}, 'YYYY-MM-DD HH:MI')")
+  cursor.execute(f"SELECT to_char({ts}, 'YYYY-MM-DD HH24:MI')")
   row = cursor.fetchone()
   if row: params['date'] = row[0]
 
