@@ -7,7 +7,7 @@ from jinja2 import Template
 template = Template("""
 <html>
   <body>
-    <table>
+    <table border="1">
       <tr><td>date</td><td>{{ date }}</td><td>since yesterday</td><td>since last week</td></tr>
       <tr><td># ratings</td><td>{{ rating_count }}</td><td>{{ rating_count_diff1d }}</td><td>{{ rating_count_diff1w }}</td></tr>
       <tr><td># surveys</td><td>{{ survey_count }}</td><td>{{ survey_count_diff1d }}</td><td>{{ survey_count_diff1w }}</td></tr>
